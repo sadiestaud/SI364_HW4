@@ -25,7 +25,7 @@ app = Flask(__name__)
 app.debug = True
 app.use_reloader = True
 app.config['SECRET_KEY'] = 'hardtoguessstring'
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL') or "postgresql://localhost/SADIESHW4db" # TODO 364: You should edit this to correspond to the database name YOURUNIQNAMEHW4db and create the database of that name (with whatever your uniqname is; for example, my database would be jczettaHW4db). You may also need to edit the database URL further if your computer requires a password for you to run this.
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL') or "postgresql://localhost/SADIESHW4db"
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -41,21 +41,23 @@ login_manager.session_protection = 'strong'
 login_manager.login_view = 'login'
 login_manager.init_app(app) # set up login manager
 
+####################################
+######## Association Tables ########
+####################################
+
+## Association tables
+
+#association Table between search terms and GIFs named search_gifs
+search_gifs = db.Table('search_gifs', db.Column('search_id', db.Integer, db.ForeignKey('search_term.id')), db.Column('gif_id', db.Integer, db.ForeignKey('gifs.id')))
+
+
+#association Table between GIFs and collections prepared by user named user_collection
+user_collection = db.Table('user_collection', db.Column('user_id', db.Integer, db.ForeignKey('users.id')), db.Column('collection_id', db.Integer, db.ForeignKey('personalGifCollections.id')))
+
+
 ########################
 ######## Models ########
 ########################
-
-## Association tables
-# NOTE - 364: You may want to complete the models tasks below BEFORE returning to build the association tables! That will making doing this much easier.
-
-# NOTE: Remember that setting up association tables in this course always has the same structure! Just make sure you refer to the correct tables and columns!
-
-# TODO 364: Set up association Table between search terms and GIFs (you can call it anything you want, we suggest 'tags' or 'search_gifs').
-
-
-
-# TODO 364: Set up association Table between GIFs and collections prepared by user (you can call it anything you want. We suggest: user_collection)
-
 
 
 ## User-related Models
@@ -67,8 +69,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(255), unique=True, index=True)
     email = db.Column(db.String(64), unique=True, index=True)
     password_hash = db.Column(db.String(128))
-    #TODO 364: In order to complete a relationship with a table that is detailed below (a one-to-many relationship for users and gif collections), you'll need to add a field to this User model. (Check out the TODOs for models below for more!)
-    # Remember, the best way to do so is to add the field, save your code, and then create and run a migration!
+    collection = db.relationship('PersonalGifCollection', backref='User') #a one-to-many relationship for users and gif collections
 
     @property
     def password(self):
@@ -87,8 +88,6 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id)) # returns User object or None
 
-# TODO 364: Read through all the models tasks before beginning them so you have an understanding of what the database structure should be like. Consider thinking about it as a whole and drawing it out before you write this code.
-
 # Model to store gifs
 class Gif(db.Model):
     __tablename__ = 'gifs'
@@ -96,30 +95,26 @@ class Gif(db.Model):
     title = db.Column(db.String(128)) # title (String up to 128 characters)
     embedURL = db.Column(db.String(256)) # embedURL (String up to 256 characters)
 
-    def __ repr__(self): #Define a __repr__ method for the Gif model that shows the title and the URL of the gif
-        return "{} : {}".format(self.title, self.embedURL)
-
-
+    def __repr__(self): #__repr__ method that shows the title and the URL of the gif
+        return "{}, URL: {}".format(self.title,self.articleURL)
 
 
 
 # Model to store a personal gif collection
 class PersonalGifCollection(db.Model):
-    pass
-    # TODO 364: Add code for the PersonalGifCollection model such that it has the following fields:
+    __tablename__ = "personalGifCollections"
     id = db.Column(db.Integer, primary_key=True) # id (Integer, primary key)
     name = db.Column(db.String(255)) # name (String, up to 255 characters)
-
-    # TODO: This model should have a one-to-many relationship with the User model (one user, many personal collections of gifs with different names -- say, "Happy Gif Collection" or "Sad Gif Collection")
-
-    # TODO: This model should also have a many to many relationship with the Gif model (one gif might be in many personal collections, one personal collection could have many gifs in it).
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id')) #one-to-many relationship with the User model (one user, many personal collections of gifs with different names)
+    gifs = db.relationship('Gif', secondary=user_collection, backref=db.backref('PersonalGifCollection', lazy='dynamic'), lazy='dynamic') #many to many relationship with the Gif model (one gif might be in many personal collections, one personal collection could have many gifs in it).
 
 class SearchTerm(db.Model):
+    __tablename__ = 'search_term'
     id = db.Column(db.Integer, primary_key=True)# id (Integer, primary key)
-    term = db.Column(db.String(32), unique=True)# term (String, up to 32 characters, unique) -- You want to ensure the database cannot save non-unique search terms
-    # TODO: This model should have a many to many relationship with gifs (a search will generate many gifs to save, and one gif could potentially appear in many searches)
+    term = db.Column(db.String(32), unique=True)# term (String, up to 32 characters, unique)
+    gifs = db.relationship('Gif', secondary=search_gifs, backref=db.backref('search_term', lazy='dynamic'), lazy='dynamic') #many to many relationship with gifs (a search will generate many gifs to save, and one gif could potentially appear in many searches)
     def __repr__(self):
-        return "{}".format(self.term) #Define a __repr__ method for this model class that returns the term string
+        return "{}".format(self.term) #__repr__ method that returns the term string
 
 
 ########################
@@ -150,7 +145,7 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField('Keep me logged in')
     submit = SubmitField('Log In')
 
-# TODO 364: The following forms for searching for gifs and creating collections are provided and should not be edited. You SHOULD examine them so you understand what data they pass along and can investigate as you build your view functions in TODOs below.
+# NOTE 364: The following forms for searching for gifs and creating collections are provided and should not be edited. You SHOULD examine them so you understand what data they pass along and can investigate as you build your view functions in TODOs below.
 class GifSearchForm(FlaskForm):
     search = StringField("Enter a term to search GIFs", validators=[Required()])
     submit = SubmitField('Submit')
