@@ -196,7 +196,7 @@ def get_or_create_search_term(term):
         gif_search = get_gifs_from_giphy(term) #invoke the get_gifs_from_giphy function to get a list of gif data from Giphy
         for g in gif_search: #iterate over that list
             title = g['title']
-            url = g['url']
+            url = g['embed_url']
             new_gif = get_or_create_gif(title, url) #invoke get_or_create_gif for each
             search_term.gifs.append(new_gif) # append the return value from get_or_create_gif to the search term's associated gifs
         db.session.add(search_term) #added and committed to the database
@@ -311,7 +311,7 @@ def create_collection():
         gif_objects = [get_gif_by_id(int(id)) for id in gifs_selected] #Use the get_gif_by_id function to create a list of Gif objects
         print("Gifs Returned", gif_objects)
         get_or_create_collection(name=form.name.data, current_user=current_user, gif_list = gif_objects) #invoke the get_or_create_collection function
-        redirect(url_for('collections')) #and redirect to the page that shows a list of all your collections.
+        redirect(url_for('collections', id_num = current_user)) #and redirect to the page that shows a list of all your collections.
     return render_template('create_collection.html', form=form) # If the form is not validated, this view function should simply render the create_collection.html template and send the form to the template.
 
 
