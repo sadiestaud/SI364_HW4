@@ -318,7 +318,7 @@ def create_collection():
 @app.route('/collections',methods=["GET","POST"])
 @login_required
 def collections():
-    collections = PersonalGifCollection.query.all()
+    collections = PersonalGifCollection.query.filter_by(user_id=current_user.id).all()
     return render_template('collections.html', collections=collections)
 
 
